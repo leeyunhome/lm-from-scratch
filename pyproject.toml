@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lm-from-scratch"
+version = "0.1.0"
+description = "Language models from scratch: n-gram vs a Bengio-style neural LM, with hand-derived backprop."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Yunhome Lee" }]
+keywords = ["language-model", "nlp", "from-scratch", "numpy", "backpropagation", "word-embeddings"]
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+viz = ["matplotlib>=3.7"]
+dev = ["pytest>=7.4", "ruff>=0.4"]
+
+[project.urls]
+Homepage = "https://github.com/leeyunhome/lm-from-scratch"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
