@@ -14,23 +14,21 @@ representation learning generalizes where counting cannot*.
 
 ## The one question this repo answers
 
-Train both models on the same six sentences — a toy `<subject> <item> <verdict>`
-grammar (read "alice apple good" as "alice finds apples good"):
+Train both models on a `<subject> <item> <verdict>` toy grammar
+(read "alice apple good" as "alice finds apples good"), split 80 / 20
+into train and validation sets:
 
-```
-alice apple  good      bob   apple  good
-alice berry  good      bob   berry  good
-                       bob   banana good
-carol banana bad
-```
+| subjects | items | verdicts | sentences |
+|---|---|---|---:|
+| alice, bob, carol, dave, eve | apple, berry, banana, cherry, grape | good / bad | 25 |
 
 Now ask each model about a context **it never saw in training** —
-`(alice, banana)` (alice was never paired with banana):
+`(alice, banana)` (alice was never paired with banana in train):
 
 | Model | P(`good` \| alice, banana) |
 |---|---:|
 | n-gram (counting) | **0.09** (uniform guess, 1/V) |
-| **neural LM** | **0.9994** |
+| **neural LM** | **≈ 0.99** |
 
 The n-gram has never seen `(alice, banana)`, so it falls back to a uniform guess.
 The neural LM places `alice` near `bob` in embedding space (both give "good"), and
@@ -85,7 +83,7 @@ examples/
 
 ## Roadmap
 
-- [ ] Scale to a larger corpus; add train/val split and held-out perplexity
+- [x] Scale to a larger corpus; add train/val split and held-out perplexity
 - [ ] Add a minimal autograd engine and contrast it with the hand-derived path
 - [ ] Add a tiny self-attention block (n-gram → MLP-LM → attention)
 - [ ] Interactive browser demo (export weights to JSON, run in JS on GitHub Pages)

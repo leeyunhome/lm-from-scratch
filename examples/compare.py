@@ -7,34 +7,51 @@ from __future__ import annotations
 
 import numpy as np
 
-from lmscratch.data import Vocab, encode_pairs, make_training_pairs
+from lmscratch.data import (
+    CORPUS_LARGE,
+    Vocab,
+    encode_pairs,
+    make_training_pairs,
+    train_val_split,
+)
 from lmscratch.ngram import NGramLM
 from lmscratch.nlm import NeuralLM, gradient_check
 
 
 def main() -> None:
-    vocab = Vocab.from_corpus()
-    X, y = encode_pairs(make_training_pairs(), vocab)
+    # Build vocab from the full corpus so val tokens are never OOV.
+    vocab = Vocab.from_corpus(CORPUS_LARGE)
+
+    train_sents, val_sents = train_val_split(CORPUS_LARGE, val_frac=0.2, seed=0)
+
+    X_tr, y_tr = encode_pairs(make_training_pairs(train_sents), vocab)
+    X_val, y_val = encode_pairs(make_training_pairs(val_sents), vocab)
 
     print("=" * 60)
-    print(f" vocab size = {len(vocab)} | training pairs = {len(y)}")
+    print(f" vocab size = {len(vocab)}")
+    print(f" train sentences = {len(train_sents)} | val sentences = {len(val_sents)}")
+    print(f" train pairs = {len(y_tr)} | val pairs = {len(y_val)}")
     print("=" * 60)
 
-    # --- gradient check (proves the hand-derived backprop is correct) ---------
+    # --- gradient check (proves the hand-derived backprop is correct) ----------
     worst = gradient_check()
     print("\n[gradient check] max |hand - numerical| per parameter:")
     for name, diff in worst.items():
         print(f"  {name:>2}: {diff:.2e}")
 
-    # --- train both models ----------------------------------------------------
-    ngram = NGramLM(vocab_size=len(vocab), smoothing_k=0.0).fit(X, y)
-    nlm = NeuralLM(vocab_size=len(vocab), emb_dim=2, hidden=8, seed=123)
-    nlm.fit(X, y, lr=0.3, epochs=3000)
+    # --- train both models on the training split --------------------------------
+    ngram = NGramLM(vocab_size=len(vocab), smoothing_k=0.0).fit(X_tr, y_tr)
+    nlm = NeuralLM(vocab_size=len(vocab), emb_dim=4, hidden=16, seed=123)
+    nlm.fit(X_tr, y_tr, lr=0.3, epochs=3000)
 
-    print(f"\ntrain perplexity   n-gram(MLE)={ngram.perplexity(X, y):.4f}"
-          f"   neural-LM={nlm.perplexity(X, y):.4f}")
+    print("\n--- perplexity ---")
+    print(f"  {'':10s}  {'train':>10s}  {'val':>10s}")
+    print(f"  {'n-gram':10s}  {ngram.perplexity(X_tr, y_tr):>10.4f}"
+          f"  {ngram.perplexity(X_val, y_val, smoothing_k=0.1):>10.4f}")
+    print(f"  {'neural-LM':10s}  {nlm.perplexity(X_tr, y_tr):>10.4f}"
+          f"  {nlm.perplexity(X_val, y_val):>10.4f}")
 
-    # --- the held-out context: (alice, banana) -> ? --------------------------
+    # --- the held-out context: (alice, banana) -> ? ----------------------------
     ctx = (vocab.encode("alice"), vocab.encode("banana"))
     good = vocab.encode("good")
     p_ngram = ngram.distribution(ctx)[good]
