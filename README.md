@@ -65,26 +65,34 @@ print("perplexity:", model.perplexity(X, y))
 - **Hand-derived backprop.** `NeuralLM.loss_and_grads` writes the forward pass
   and every gradient out explicitly — no autograd. Correctness is enforced by an
   automated finite-difference **gradient check** in the test suite.
+- **Minimal autograd engine.** `autograd.Tensor` is ~120 lines of pure NumPy: a
+  `_backward` closure per op, reverse topological traversal. `NeuralLMAuto` uses
+  it to train the same model — and `gradient_compare()` proves both paths produce
+  bit-for-bit identical gradients.
 - **No magic.** Pure NumPy, small enough to read end to end.
 - **Tested & CI'd.** `pytest` covers the gradient check, n-gram probability
-  identities, and data-pipeline invariants; GitHub Actions runs it on every push.
+  identities, autograd op correctness, and data-pipeline invariants; GitHub
+  Actions runs it on every push.
 
 ## Project layout
 
 ```
 src/lmscratch/
-  data.py     # toy corpus, Vocab, trigram training pairs
-  ngram.py    # NGramLM: counts + add-k smoothing + uniform backoff
-  nlm.py      # NeuralLM: embedding -> tanh -> softmax + hand-derived backprop
-tests/        # gradient check + model/data invariants
+  data.py      # toy corpus, Vocab, trigram training pairs, train/val split
+  ngram.py     # NGramLM: counts + add-k smoothing + uniform backoff
+  nlm.py       # NeuralLM: embedding -> tanh -> softmax + hand-derived backprop
+  autograd.py  # minimal tensor autograd engine (~120 lines, pure NumPy)
+  nlm_auto.py  # NeuralLMAuto: same model, backward via autograd engine
+tests/         # gradient checks, model/data invariants, autograd op tests
 examples/
-  compare.py  # the headline n-gram vs neural-LM comparison
+  compare.py       # headline n-gram vs neural-LM comparison
+  autograd_demo.py # hand backprop vs autograd: proves bit-for-bit equivalence
 ```
 
 ## Roadmap
 
 - [x] Scale to a larger corpus; add train/val split and held-out perplexity
-- [ ] Add a minimal autograd engine and contrast it with the hand-derived path
+- [x] Add a minimal autograd engine and contrast it with the hand-derived path
 - [ ] Add a tiny self-attention block (n-gram → MLP-LM → attention)
 - [ ] Interactive browser demo (export weights to JSON, run in JS on GitHub Pages)
 
