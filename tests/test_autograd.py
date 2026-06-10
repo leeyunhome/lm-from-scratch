@@ -11,7 +11,6 @@ Key checks:
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from lmscratch.autograd import Tensor, cross_entropy, embedding_lookup
 from lmscratch.nlm_auto import NeuralLMAuto, gradient_compare
