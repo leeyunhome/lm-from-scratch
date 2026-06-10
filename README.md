@@ -35,6 +35,14 @@ The neural LM places `alice` near `bob` in embedding space (both give "good"), a
 `banana` near the other items — so it *infers* `good`. That single contrast is the
 whole point. (Reproduce with `make demo`.)
 
+## Live demo
+
+**[leeyunhome.github.io/lm-from-scratch](https://leeyunhome.github.io/lm-from-scratch)**
+— pick any subject / item pair and compare predictions in the browser
+(pure JS inference, no server needed).
+
+> To enable GitHub Pages: repo Settings → Pages → Source: **main** branch, **/docs** folder.
+
 ## Install
 
 ```bash
@@ -94,7 +102,7 @@ examples/
 - [x] Scale to a larger corpus; add train/val split and held-out perplexity
 - [x] Add a minimal autograd engine and contrast it with the hand-derived path
 - [ ] Add a tiny self-attention block (n-gram → MLP-LM → attention)
-- [ ] Interactive browser demo (export weights to JSON, run in JS on GitHub Pages)
+- [x] Interactive browser demo (export weights to JSON, run in JS on GitHub Pages)
 
 ## License
 

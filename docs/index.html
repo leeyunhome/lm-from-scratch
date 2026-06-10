@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>n-gram vs Neural LM — Interactive Demo</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f1f5f9;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 1.25rem;
+  padding: 2rem 2.25rem;
+  max-width: 580px;
+  width: 100%;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+}
+
+h1 {
+  font-size: 1.4rem;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin-top: 0.4rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── controls ─────────────────────────────────────── */
+.controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.field span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+select {
+  font-size: 0.95rem;
+  padding: 0.45rem 0.75rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.6rem;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+select:focus { border-color: #3b82f6; }
+
+/* ── result panel ─────────────────────────────────── */
+.result {
+  background: #f8fafc;
+  border-radius: 0.875rem;
+  padding: 1.25rem 1.375rem;
+}
+
+.ctx-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: ui-monospace, monospace;
+  margin-bottom: 0.6rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.73rem;
+  font-weight: 600;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  margin-bottom: 1.1rem;
+}
+.badge.unseen { background: #fef3c7; color: #92400e; }
+.badge.seen   { background: #dcfce7; color: #166534; }
+
+.verdict-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  margin-top: 0.9rem;
+  margin-bottom: 0.45rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 58px 1fr 52px;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.45rem;
+}
+.bar-row .lbl {
+  font-size: 0.8rem;
+  color: #64748b;
+  text-align: right;
+}
+.track {
+  height: 22px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.35s cubic-bezier(.4,0,.2,1);
+  min-width: 2px;
+}
+.fill.neural { background: #3b82f6; }
+.fill.ngram  { background: #94a3b8; }
+.fill.dim    { opacity: 0.45; }
+.pct {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+.pct.dim { color: #94a3b8; }
+
+.note {
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.65;
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+.note strong { color: #374151; }
+.note code {
+  font-family: ui-monospace, monospace;
+  background: #f1f5f9;
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* ── footer ───────────────────────────────────────── */
+details { margin-top: 1.25rem; }
+summary {
+  font-size: 0.82rem;
+  color: #3b82f6;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+summary::before { content: "▸  "; }
+details[open] summary::before { content: "▾  "; }
+.about {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.7;
+  margin-top: 0.75rem;
+  padding-left: 0.5rem;
+}
+.about p + p { margin-top: 0.5rem; }
+.about a { color: #3b82f6; }
+.about code {
+  font-family: ui-monospace, monospace;
+  background: #f1f5f9;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+.loading { color: #94a3b8; font-size: 0.9rem; }
+.error   { color: #ef4444; font-size: 0.85rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>n-gram &nbsp;vs&nbsp; Neural LM</h1>
+  <p class="subtitle">
+    Both models trained on the same 6 toy sentences of a
+    <code style="font-size:0.85em;background:#f1f5f9;padding:.1em .3em;border-radius:3px">
+    subject item verdict</code> grammar.
+    Pick a pair and compare predictions.
+  </p>
+
+  <div class="controls">
+    <div class="field">
+      <span>Subject</span>
+      <select id="subj"></select>
+    </div>
+    <div class="field">
+      <span>Item</span>
+      <select id="item"></select>
+    </div>
+  </div>
+
+  <div class="result" id="result">
+    <p class="loading">Loading model…</p>
+  </div>
+
+  <details>
+    <summary>How it works</summary>
+    <div class="about">
+      <p>
+        The <strong>n-gram</strong> model counts trigrams: for a context it has
+        seen it returns the empirical distribution; for an <em>unseen</em> context
+        it falls back to a uniform <code>1/V</code> guess.
+      </p>
+      <p>
+        The <strong>neural LM</strong> (Bengio 2003 style) learns a 2-D embedding
+        for every word. Because <em>alice</em> and <em>bob</em> behave similarly
+        in training they end up close in embedding space — so the model can
+        generalise to contexts like <em>(alice, banana)</em> that counting never saw.
+      </p>
+      <p>
+        Source &amp; full write-up:
+        <a href="https://github.com/leeyunhome/lm-from-scratch" target="_blank">
+          github.com/leeyunhome/lm-from-scratch
+        </a>
+      </p>
+    </div>
+  </details>
+</div>
+
+<script>
+// ── tiny linear algebra ────────────────────────────────────────────────────────
+// v [k] × M [k, n] → out [n]  (matches Python:  v @ M)
+function vecMat(v, M) {
+  const n = M[0].length, out = new Array(n).fill(0);
+  for (let i = 0; i < v.length; i++)
+    for (let j = 0; j < n; j++)
+      out[j] += v[i] * M[i][j];
+  return out;
+}
+function vadd(a, b) { return a.map((x, i) => x + b[i]); }
+function vtanh(v)   { return v.map(Math.tanh); }
+function softmax(z) {
+  const mx = Math.max(...z), e = z.map(x => Math.exp(x - mx));
+  const s  = e.reduce((a, b) => a + b, 0);
+  return e.map(x => x / s);
+}
+
+// ── neural forward pass ────────────────────────────────────────────────────────
+function neuralPredict(m, sId, iId) {
+  const { E, W1, b1, W2, b2 } = m.neural;
+  const emb = [...E[sId], ...E[iId]];          // embedding concat  [C*D]
+  const h   = vtanh(vadd(vecMat(emb, W1), b1)); // hidden            [H]
+  const z   = vadd(vecMat(h, W2), b2);          // logits            [V]
+  return softmax(z);                             // probs             [V]
+}
+
+// ── render ─────────────────────────────────────────────────────────────────────
+let MODEL = null;
+
+function pct(p) { return (p * 100).toFixed(1) + '%'; }
+
+function barRow(cls, label, prob, dim) {
+  return `
+    <div class="bar-row">
+      <span class="lbl">${label}</span>
+      <div class="track">
+        <div class="fill ${cls}${dim ? ' dim' : ''}" style="width:${prob * 100}%"></div>
+      </div>
+      <span class="pct${dim ? ' dim' : ''}">${pct(prob)}</span>
+    </div>`;
+}
+
+function render() {
+  if (!MODEL) return;
+  const sName = document.getElementById('subj').value;
+  const iName = document.getElementById('item').value;
+  const sId   = MODEL.vocab[sName];
+  const iId   = MODEL.vocab[iName];
+  const key   = `${sId},${iId}`;
+
+  const pN  = neuralPredict(MODEL, sId, iId);
+  const pG  = MODEL.ngram.distributions[key];
+  const seen = MODEL.ngram.seen.includes(key);
+
+  const goodId = MODEL.vocab['good'];
+  const badId  = MODEL.vocab['bad'];
+
+  const badge = seen
+    ? `<span class="badge seen">✓ seen in training</span>`
+    : `<span class="badge unseen">⚠ never seen in training</span>`;
+
+  let note;
+  if (seen) {
+    const ex = MODEL.train_sentences
+      .filter(s => s.startsWith(sName + ' ' + iName))
+      .map(s => `<code>${s}</code>`).join(', ');
+    note = `Training data for this pair: ${ex}`;
+  } else {
+    note = `<strong>(${sName}, ${iName})</strong> never appeared in training.
+      The n-gram returns a uniform 1/${MODEL.itos.length} ≈ ${pct(pG[goodId])} for every token.
+      The neural LM infers the verdict from learned word embeddings —
+      <em>${sName}</em> sits near subjects with similar tastes in embedding space.`;
+  }
+
+  document.getElementById('result').innerHTML = `
+    <div class="ctx-label">P(? | ${sName}, ${iName})</div>
+    ${badge}
+    <div class="verdict-label">good</div>
+    ${barRow('ngram',  'n-gram', pG[goodId],  false)}
+    ${barRow('neural', 'neural', pN[goodId],  false)}
+    <div class="verdict-label">bad</div>
+    ${barRow('ngram',  'n-gram', pG[badId],   true)}
+    ${barRow('neural', 'neural', pN[badId],   true)}
+    <div class="note">${note}</div>
+  `;
+}
+
+// ── init ───────────────────────────────────────────────────────────────────────
+fetch('model.json')
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(data => {
+    MODEL = data;
+    const ss = document.getElementById('subj');
+    const is = document.getElementById('item');
+    data.subjects.forEach(s => { const o = new Option(s, s); ss.add(o); });
+    data.items.forEach(it => { const o = new Option(it, it); is.add(o); });
+    // default: the dramatic unseen case
+    ss.value = 'alice'; is.value = 'banana';
+    ss.addEventListener('change', render);
+    is.addEventListener('change', render);
+    render();
+  })
+  .catch(err => {
+    document.getElementById('result').innerHTML =
+      `<p class="error">
+        Could not load <code>model.json</code> (${err}).<br>
+        If testing locally, serve the docs/ folder with:<br>
+        <code>python -m http.server --directory docs</code>
+       </p>`;
+  });
+</script>
+</body>
+</html>
